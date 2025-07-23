@@ -4,7 +4,7 @@ class PerconaServerAT80 < Formula
   url "https://downloads.percona.com/downloads/Percona-Server-8.0/Percona-Server-8.0.40-31/source/tarball/percona-server-8.0.40-31.tar.gz"
   sha256 "1318670d8e176c24df74019f748f5f233e2787f865dd3d41d61790ab5a772c4e"
   license "BSD-3-Clause"
-  revision 3
+  revision 4
 
   livecheck do
     url "https://www.percona.com/products-api.php", post_form: {
@@ -95,6 +95,12 @@ class PerconaServerAT80 < Formula
     url "https://github.com/Percona-Lab/coredumper/commit/715fa9da1d7958e39d69e9b959c7a23fec8650ab.patch?full_index=1"
     sha256 "632a6aff4091d9cbe010ed600eeb548ae7762ac7e822113f9c93e3fef9aafb4f"
     directory "extra/coredumper"
+  end
+
+  # Fix build with recent clang.
+  patch do
+    url "https://bz-attachments.freebsd.org/attachment.cgi?id=253092"
+    sha256 "04aa31c9c70a377eca2c153c0bf1a9b7d8ab5c4f7d95b501f1a80e2ecf59a161"
   end
 
   def datadir

@@ -4,7 +4,7 @@ class PerconaServer < Formula
   url "https://downloads.percona.com/downloads/Percona-Server-8.4/Percona-Server-8.4.3-3/source/tarball/percona-server-8.4.3-3.tar.gz"
   sha256 "dfb5b46fccd8284ad3a09054f9a62d0a6423a2b703b6fb86d186cec09cee660a"
   license "BSD-3-Clause"
-  revision 3
+  revision 4
 
   livecheck do
     url "https://www.percona.com/products-api.php", post_form: {
@@ -76,6 +76,12 @@ class PerconaServer < Formula
     directory "extra/coredumper"
   end
 
+  # Fix build with recent clang.
+  patch do
+    url "https://bz-attachments.freebsd.org/attachment.cgi?id=253092"
+    sha256 "04aa31c9c70a377eca2c153c0bf1a9b7d8ab5c4f7d95b501f1a80e2ecf59a161"
+  end
+
   # Patch out check for Homebrew `boost`.
   # This should not be necessary when building inside `brew`.
   # https://github.com/Homebrew/homebrew-test-bot/pull/820
@@ -136,6 +142,12 @@ class PerconaServer < Formula
     ]
     args << "-DROCKSDB_DISABLE_AVX2=ON" if build.bottle?
     args << "-DWITH_KERBEROS=system" unless OS.mac?
+
+    # Workaround for
+    #  error: a template argument list is expected after a name prefixed by the template keyword
+    #   84 |     return Archive_derived_type::template get_size(std::forward<Type>(arg));
+    #      |                                           ^
+    ENV.append_to_cflags "-Wno-missing-template-arg-list-after-template-kw"
 
     system "cmake", "-S", ".", "-B", "build", *args, *std_cmake_args
     system "cmake", "--build", "build"

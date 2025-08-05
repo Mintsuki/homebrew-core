@@ -1,8 +1,6 @@
 class Netatalk < Formula
   desc "File server for Macs, compliant with Apple Filing Protocol (AFP)"
   homepage "https://netatalk.io"
-  url "https://github.com/Netatalk/netatalk/releases/download/netatalk-4-3-0/netatalk-4.3.0.tar.xz"
-  sha256 "bc71a6a2f11cf00cb69ef13e8487ab78d1241ae535feb010220c74c89dc890fb"
   license all_of: [
     "GPL-2.0-only",
     "GPL-2.0-or-later",
@@ -12,7 +10,15 @@ class Netatalk < Formula
     "BSD-3-Clause",
     "MIT",
   ]
+  revision 1
   head "https://github.com/Netatalk/netatalk.git", branch: "main"
+
+  stable do
+    url "https://github.com/Netatalk/netatalk/releases/download/netatalk-4-3-0/netatalk-4.3.0.tar.xz"
+    sha256 "bc71a6a2f11cf00cb69ef13e8487ab78d1241ae535feb010220c74c89dc890fb"
+
+    depends_on "berkeley-db@5" # macOS bdb library lacks DBC type etc.
+  end
 
   no_autobump! because: :incompatible_version_format
 
@@ -31,7 +37,6 @@ class Netatalk < Formula
   depends_on "ninja" => :build
   depends_on "pkgconf" => :build
 
-  depends_on "berkeley-db@5" # macOS bdb library lacks DBC type etc.
   depends_on "cracklib"
   depends_on "iniparser"
   depends_on "libevent"
@@ -42,6 +47,7 @@ class Netatalk < Formula
   uses_from_macos "krb5"
   uses_from_macos "libxcrypt"
   uses_from_macos "perl"
+  uses_from_macos "sqlite"
 
   on_linux do
     depends_on "avahi" # on macOS we use native mDNS instead
@@ -52,17 +58,21 @@ class Netatalk < Formula
 
   conflicts_with "ad", because: "both install `ad` binaries"
 
+  resource "bstring" do
+    url "https://github.com/msteinert/bstring/releases/download/v1.0.1/bstring-1.0.1.tar.xz"
+    sha256 "a86b6b30f4ad2496784cc7f53eb449c994178b516935384c6707f381b9fe6056"
+  end
+
   def install
+    (buildpath/"subprojects/bstring-1.0.1").install resource("bstring")
+
     inreplace "distrib/initscripts/macos.netatalk.in", "@sbindir@", opt_sbin
     inreplace "distrib/initscripts/macos.netatalk.plist.in", "@bindir@", opt_bin
     inreplace "distrib/initscripts/macos.netatalk.plist.in", "@sbindir@", opt_sbin
     inreplace "distrib/initscripts/systemd.netatalk.service.in", "@sbindir@", opt_sbin
-    bdb5_rpath = rpath(target: Formula["berkeley-db@5"].opt_lib)
-    ENV.append "LDFLAGS", "-Wl,-rpath,#{bdb5_rpath}" if OS.linux?
     args = [
       "-Dwith-afpstats=false",
       "-Dwith-appletalk=#{OS.linux?}", # macOS doesn't have an AppleTalk stack
-      "-Dwith-bdb-path=#{Formula["berkeley-db@5"].opt_prefix}",
       "-Dwith-cups-libdir-path=#{libexec}",
       "-Dwith-cups-pap-backend=#{OS.linux?}",
       "-Dwith-docs=man,readmes,html_manual",
@@ -76,6 +86,11 @@ class Netatalk < Formula
       "-Dwith-spotlight=false",
       "-Dwith-statedir-path=#{var}",
     ]
+    if build.stable?
+      bdb5_rpath = rpath(target: Formula["berkeley-db@5"].opt_lib)
+      ENV.append "LDFLAGS", "-Wl,-rpath,#{bdb5_rpath}" if OS.linux?
+      args << "-Dwith-bdb-path=#{Formula["berkeley-db@5"].opt_prefix}"
+    end
 
     system "meson", "setup", "build", *args, *std_meson_args
     system "meson", "compile", "-C", "build", "--verbose"
